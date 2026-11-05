@@ -21,6 +21,7 @@ import {
   AlertCircle,
   Copy,
   Check,
+  Star,
 } from 'lucide-react';
 import { TripPost, StudentProfile } from '../types/carpool';
 import { useCarpool } from '../context/CarpoolContext';
@@ -30,6 +31,7 @@ interface TripDetailDrawerProps {
   onClose: () => void;
   onOpenChat: (tripId: string) => void;
   onOpenSplit: (tripId: string) => void;
+  onOpenRateReview?: (targetStudent: StudentProfile, trip: TripPost, role: 'driver' | 'rider') => void;
 }
 
 export const TripDetailDrawer: React.FC<TripDetailDrawerProps> = ({
@@ -37,12 +39,14 @@ export const TripDetailDrawer: React.FC<TripDetailDrawerProps> = ({
   onClose,
   onOpenChat,
   onOpenSplit,
+  onOpenRateReview,
 }) => {
   const {
     currentStudent,
     trips,
     getStudentById,
     getDisplayContact,
+    getStudentRatingStats,
     requestSeat,
     cancelSeatRequest,
     handleRosterDecision,
@@ -317,7 +321,7 @@ export const TripDetailDrawer: React.FC<TripDetailDrawerProps> = ({
                     className="w-12 h-12 rounded-full object-cover ring-2 ring-slate-100 dark:ring-slate-700"
                   />
                   <div>
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1.5 flex-wrap">
                       <h4 className="text-sm font-bold text-slate-900 dark:text-white">
                         {contact.displayName}
                       </h4>
@@ -325,6 +329,16 @@ export const TripDetailDrawer: React.FC<TripDetailDrawerProps> = ({
                         <ShieldCheck className="w-3 h-3" />
                         .edu Verified
                       </span>
+                      {(() => {
+                        const stats = getStudentRatingStats(author.id);
+                        return (
+                          <span className="inline-flex items-center gap-1 text-xs font-semibold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-1.5 py-0.5 rounded border border-amber-200/60">
+                            <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                            <span className="font-mono tabular-nums">{stats.average.toFixed(1)}</span>
+                            <span className="text-slate-400 font-normal">({stats.count})</span>
+                          </span>
+                        );
+                      })()}
                     </div>
                     <p className="text-xs text-slate-500">
                       {author.major} · Class of {author.gradYear}
@@ -334,6 +348,17 @@ export const TripDetailDrawer: React.FC<TripDetailDrawerProps> = ({
                     </p>
                   </div>
                 </div>
+
+                {!isMyTrip && onOpenRateReview && (
+                  <button
+                    onClick={() => onOpenRateReview(author, trip, isDriverOffer ? 'rider' : 'driver')}
+                    className="shrink-0 text-xs font-semibold text-amber-800 hover:text-amber-900 bg-amber-50 hover:bg-amber-100 border border-amber-300/80 px-2.5 py-1.5 rounded-lg transition-colors flex items-center gap-1"
+                    title="Leave an anonymous review for this student"
+                  >
+                    <Star className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
+                    <span>Rate Anonymously</span>
+                  </button>
+                )}
               </div>
 
               {author.bio && (
@@ -527,7 +552,7 @@ export const TripDetailDrawer: React.FC<TripDetailDrawerProps> = ({
                           className="w-8 h-8 rounded-full object-cover shrink-0"
                         />
                         <div className="min-w-0">
-                          <div className="flex items-center gap-1.5">
+                          <div className="flex items-center gap-1.5 flex-wrap">
                             <span className="text-xs font-semibold text-slate-900 dark:text-white truncate">
                               {passengerContact.displayName}
                             </span>
@@ -542,6 +567,16 @@ export const TripDetailDrawer: React.FC<TripDetailDrawerProps> = ({
                             >
                               {passenger.status}
                             </span>
+                            {(() => {
+                              const pStats = getStudentRatingStats(student.id);
+                              return (
+                                <span className="inline-flex items-center gap-0.5 text-[11px] font-semibold text-amber-600 dark:text-amber-400 font-mono">
+                                  <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                                  <span>{pStats.average.toFixed(1)}</span>
+                                  <span className="text-slate-400 font-normal">({pStats.count})</span>
+                                </span>
+                              );
+                            })()}
                           </div>
                           {passenger.pickupNote && (
                             <p className="text-[11px] text-slate-500 truncate">
@@ -567,6 +602,18 @@ export const TripDetailDrawer: React.FC<TripDetailDrawerProps> = ({
                             Decline
                           </button>
                         </div>
+                      )}
+
+                      {/* Rate Passenger Option for Driver / Fellow Passengers */}
+                      {passenger.studentId !== currentStudent.id && isAcceptedRoster && onOpenRateReview && (
+                        <button
+                          onClick={() => onOpenRateReview(student, trip, 'driver')}
+                          className="shrink-0 text-[11px] font-medium text-amber-800 hover:text-amber-900 bg-amber-50 hover:bg-amber-100 border border-amber-300/80 px-2 py-1 rounded-md transition-colors flex items-center gap-1"
+                          title="Rate this rider anonymously"
+                        >
+                          <Star className="w-3 h-3 fill-amber-500 text-amber-500" />
+                          <span>Rate Rider</span>
+                        </button>
                       )}
 
                       {/* Passenger View if Accepted */}

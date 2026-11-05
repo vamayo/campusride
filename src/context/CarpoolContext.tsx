@@ -10,6 +10,7 @@ import {
   AppNotification,
   PushNotificationSettings,
   NotificationCategory,
+  ReviewRecord,
 } from '../types/carpool';
 import {
   INITIAL_STUDENTS,
@@ -18,6 +19,7 @@ import {
   INITIAL_SETTLEMENTS,
   INITIAL_NOTIFICATIONS,
   DEFAULT_NOTIFICATION_SETTINGS,
+  INITIAL_REVIEWS,
 } from '../data/seedData';
 
 interface CarpoolContextType {
@@ -67,6 +69,13 @@ interface CarpoolContextType {
   triggerTestReminder: (type: 'departure' | 'payment' | 'upcoming') => void;
   activePushToast: AppNotification | null;
   dismissPushToast: () => void;
+  reviews: ReviewRecord[];
+  addReview: (reviewData: Omit<ReviewRecord, 'id' | 'createdAt' | 'authorLabel'>) => void;
+  getStudentRatingStats: (studentId: string) => {
+    average: number;
+    count: number;
+    reviews: ReviewRecord[];
+  };
   resetAllData: () => void;
 }
 
@@ -80,6 +89,7 @@ const STORAGE_KEYS = {
   SETTLEMENTS: 'campusride_settlements_v1',
   NOTIFICATIONS: 'campusride_notifications_v1',
   PUSH_SETTINGS: 'campusride_push_settings_v1',
+  REVIEWS: 'campusride_reviews_v1',
 };
 
 export const CarpoolProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -160,6 +170,18 @@ export const CarpoolProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return DEFAULT_NOTIFICATION_SETTINGS;
   });
 
+  const [reviews, setReviews] = useState<ReviewRecord[]>(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.REVIEWS);
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch {
+        // ignore
+      }
+    }
+    return INITIAL_REVIEWS;
+  });
+
   const [browserPushPermission, setBrowserPushPermission] = useState<NotificationPermission | 'unsupported'>(() => {
     if (typeof window !== 'undefined' && 'Notification' in window) {
       return Notification.permission;
@@ -197,6 +219,10 @@ export const CarpoolProvider: React.FC<{ children: React.ReactNode }> = ({ child
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.PUSH_SETTINGS, JSON.stringify(pushSettings));
   }, [pushSettings]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.REVIEWS, JSON.stringify(reviews));
+  }, [reviews]);
 
   // Auto dismiss push toast after 6 seconds
   useEffect(() => {
@@ -849,6 +875,48 @@ export const CarpoolProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setActivePushToast(null);
   };
 
+  const getStudentRatingStats = (studentId: string) => {
+    const studentReviews = reviews.filter((r) => r.targetStudentId === studentId);
+    if (studentReviews.length === 0) {
+      return {
+        average: 5.0,
+        count: 0,
+        reviews: [],
+      };
+    }
+    const sum = studentReviews.reduce((acc, r) => acc + r.rating, 0);
+    return {
+      average: Math.round((sum / studentReviews.length) * 10) / 10,
+      count: studentReviews.length,
+      reviews: [...studentReviews].sort(
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      ),
+    };
+  };
+
+  const addReview = (reviewData: Omit<ReviewRecord, 'id' | 'createdAt' | 'authorLabel'>) => {
+    const authorLabel = reviewData.isAnonymous
+      ? `Anonymous Verified ${reviewData.reviewerRole === 'driver' ? 'Driver' : 'Rider'}`
+      : currentStudent.name;
+
+    const newReview: ReviewRecord = {
+      ...reviewData,
+      id: `rev-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      authorLabel,
+      createdAt: new Date().toISOString(),
+    };
+
+    setReviews((prev) => [newReview, ...prev]);
+
+    sendPushNotification(
+      'carpool_update',
+      '⭐ New Anonymous Feedback Submitted',
+      `${authorLabel} rated ${reviewData.rating}★: "${newReview.comment.length > 55 ? newReview.comment.slice(0, 52) + '...' : newReview.comment}"`,
+      newReview.tripId,
+      'view_trip'
+    );
+  };
+
   const resetAllData = () => {
     localStorage.removeItem(STORAGE_KEYS.CURRENT_USER_ID);
     localStorage.removeItem(STORAGE_KEYS.STUDENTS);
@@ -857,6 +925,7 @@ export const CarpoolProvider: React.FC<{ children: React.ReactNode }> = ({ child
     localStorage.removeItem(STORAGE_KEYS.SETTLEMENTS);
     localStorage.removeItem(STORAGE_KEYS.NOTIFICATIONS);
     localStorage.removeItem(STORAGE_KEYS.PUSH_SETTINGS);
+    localStorage.removeItem(STORAGE_KEYS.REVIEWS);
     setCurrentStudentId('student-maya');
     setStudents(INITIAL_STUDENTS);
     setTrips(INITIAL_TRIPS);
@@ -864,6 +933,7 @@ export const CarpoolProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setSettlements(INITIAL_SETTLEMENTS);
     setNotifications(INITIAL_NOTIFICATIONS);
     setPushSettings(DEFAULT_NOTIFICATION_SETTINGS);
+    setReviews(INITIAL_REVIEWS);
   };
 
   return (
@@ -902,6 +972,9 @@ export const CarpoolProvider: React.FC<{ children: React.ReactNode }> = ({ child
         triggerTestReminder,
         activePushToast,
         dismissPushToast,
+        reviews,
+        addReview,
+        getStudentRatingStats,
         resetAllData,
       }}
     >

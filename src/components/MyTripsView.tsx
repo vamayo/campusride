@@ -13,9 +13,10 @@ import {
   AlertCircle,
   CheckCircle2,
   Clock4,
+  Star,
 } from 'lucide-react';
 import { useCarpool } from '../context/CarpoolContext';
-import { TripPost } from '../types/carpool';
+import { TripPost, StudentProfile } from '../types/carpool';
 
 interface MyTripsViewProps {
   onSelectTrip: (trip: TripPost) => void;
@@ -23,6 +24,7 @@ interface MyTripsViewProps {
   onOpenChat: (tripId: string) => void;
   onOpenSplit: (tripId: string) => void;
   onExploreBoard: () => void;
+  onOpenRateReview?: (targetStudent: StudentProfile, trip: TripPost, role: 'driver' | 'rider') => void;
 }
 
 export const MyTripsView: React.FC<MyTripsViewProps> = ({
@@ -31,12 +33,14 @@ export const MyTripsView: React.FC<MyTripsViewProps> = ({
   onOpenChat,
   onOpenSplit,
   onExploreBoard,
+  onOpenRateReview,
 }) => {
   const {
     currentStudent,
     trips,
     getStudentById,
     getRiderRecommendations,
+    getStudentRatingStats,
     combinePosts,
   } = useCarpool();
   const [filterMode, setFilterMode] = useState<'all' | 'driving' | 'riding'>('all');
@@ -204,11 +208,22 @@ export const MyTripsView: React.FC<MyTripsViewProps> = ({
                           </span>
                         )}
                       </div>
-                    ) : (
                       <div className="flex items-center justify-between">
-                        <span className="text-slate-600 dark:text-slate-400">
-                          Driver: {driver?.name || 'Fellow Student'}
-                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-slate-600 dark:text-slate-400">
+                            Driver: {driver?.name || 'Fellow Student'}
+                          </span>
+                          {driver && (() => {
+                            const dStats = getStudentRatingStats(driver.id);
+                            return (
+                              <span className="inline-flex items-center gap-0.5 text-[11px] font-semibold text-amber-600 dark:text-amber-400 font-mono">
+                                <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                                <span>{dStats.average.toFixed(1)}</span>
+                                <span className="text-slate-400 font-normal">({dStats.count})</span>
+                              </span>
+                            );
+                          })()}
+                        </div>
                         <span className="font-mono text-emerald-800 dark:text-emerald-300 font-bold">
                           ${trip.suggestedSplitPerSeat.toFixed(2)} fair split
                         </span>
@@ -277,6 +292,17 @@ export const MyTripsView: React.FC<MyTripsViewProps> = ({
                   </button>
 
                   <div className="flex items-center gap-1.5">
+                    {/* Rate Driver option for confirmed riders */}
+                    {!isDriving && driver && onOpenRateReview && (
+                      <button
+                        onClick={() => onOpenRateReview(driver, trip, 'rider')}
+                        className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 border border-amber-200/80 rounded-lg transition-colors"
+                        title="Rate Driver Anonymously"
+                      >
+                        <Star className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
+                        <span>Rate</span>
+                      </button>
+                    )}
                     <button
                       onClick={() => onOpenSplit(trip.id)}
                       className="p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"

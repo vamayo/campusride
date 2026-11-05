@@ -150,3 +150,18 @@ export interface SettlementRecord {
   paymentMethodUsed?: string;
   note?: string;
 }
+
+export interface ReviewRecord {
+  id: string;
+  targetStudentId: string;
+  reviewerId: string;
+  reviewerRole: 'driver' | 'rider';
+  tripId?: string;
+  tripRouteTitle?: string;
+  rating: number; // 1 to 5
+  comment: string;
+  tags: string[];
+  isAnonymous: boolean;
+  authorLabel: string;
+  createdAt: string;
+}
