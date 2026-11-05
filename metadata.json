@@ -1,0 +1,6 @@
+{
+  "name": "CampusRide: Student Carpool & Rideshare",
+  "description": "Privacy-focused college rideshare and carpooling platform for students traveling on weekends and academic breaks with verified .edu profiles, discussion boards, messaging, and fare splitting.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
