@@ -208,6 +208,7 @@ export const MyTripsView: React.FC<MyTripsViewProps> = ({
                           </span>
                         )}
                       </div>
+                    ) : (
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-1.5">
                           <span className="text-slate-600 dark:text-slate-400">

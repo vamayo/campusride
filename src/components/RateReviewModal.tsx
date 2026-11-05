@@ -83,7 +83,7 @@ export const RateReviewModal: React.FC<RateReviewModalProps> = ({
       reviewerId: currentStudent.id,
       reviewerRole,
       tripId: trip?.id,
-      tripRouteTitle: trip ? `${trip.origin} → ${trip.destination}` : 'Campus Carpool',
+      tripRouteTitle: trip ? `${trip.originCampus} → ${trip.destinationCity}` : 'Campus Carpool',
       rating,
       comment: comment.trim() || (rating >= 4 ? 'Great carpool experience, highly recommended for fellow campus students!' : 'Carpool completed.'),
       tags: selectedTraits,
@@ -154,7 +154,7 @@ export const RateReviewModal: React.FC<RateReviewModalProps> = ({
                     </span>
                   </div>
                   <div className="text-xs text-slate-500">
-                    {targetStudent.major} · {targetStudent.year}
+                    {targetStudent.major} · Class of {targetStudent.gradYear}
                   </div>
                 </div>
               </div>
@@ -165,7 +165,7 @@ export const RateReviewModal: React.FC<RateReviewModalProps> = ({
                     Carpool Route
                   </div>
                   <div className="text-xs font-semibold text-slate-800">
-                    {trip.destination}
+                    {trip.destinationCity}
                   </div>
                 </div>
               )}
